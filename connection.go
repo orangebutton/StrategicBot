@@ -5,14 +5,14 @@ import (
 	"encoding/json"
 	"log"
 	"net"
+	"strconv"
 )
 
 type SBRequest map[string]interface{}
 
 // Needs to look up the lobby URL, get the login token and then connect.
 func Connect() {
-	con, err := net.Dial("tcp", "107.21.58.31:8081")
-	deny(err)
+	con, ch := ListonToURL("107.21.58.31:8081")
 
 	log.Println("Connection established:", con)
 
@@ -26,15 +26,56 @@ func Connect() {
 
 	log.Println("Bytes written: ", bytesWritten)
 
-	readBuffer := make([]byte, 1024)
-	bytesRead, err := con.Read(readBuffer)
+	for reply := range ch {
+		var v MLobbyLookup
+		json.Unmarshal(reply, &v)
+		if v.Msg == "LobbyLookup" {
+			lobbyURL := v.Ip + ":" + strconv.Itoa(v.Port)
+			log.Println("v is:", v)
+			log.Println("lobbyURL is:", lobbyURL)
+		}
+	}
+}
+
+// Listens to an URL and buffers the read bytes.
+func ListonToURL(url string) (net.Conn, chan []byte) {
+	// Connect to the specified URL
+	con, err := net.Dial("tcp", url)
 	deny(err)
 
-	log.Println("Read:", readBuffer)
-	log.Println("Bytes read:", bytesRead)
+	// Make a channel to pass the listened content to other functions
+	ch := make(chan []byte)
 
-	var replyBuffer bytes.Buffer
-	replyBuffer.Write(readBuffer[:bytesRead])
+	// Goroutine which listens and cuts the content into convenient portions
+	go func() {
+		var chBuffer bytes.Buffer
+		readBuffer := make([]byte, 1024)
 
-	log.Println("replyBuffer:", replyBuffer)
+		for {
+			bytesRead, err := con.Read(readBuffer)
+			if err != nil {
+				close(ch)
+				log.Printf("ListenToURL connection error: %s", err)
+				return
+			}
+
+			chBuffer.Write(readBuffer[:bytesRead])
+
+			// Cut into lines
+			lines := bytes.SplitAfter(chBuffer.Bytes(), []byte("\n"))
+
+			for _, line := range lines[:len(lines)-1] {
+				n := len(line)
+				if n > 1 {
+					lineCopy := make([]byte, n)
+					copy(lineCopy, line)
+					ch <- lineCopy
+				}
+
+				chBuffer.Next(n)
+			}
+		}
+	}()
+
+	return con, ch
 }
