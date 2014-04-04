@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"log"
 	"net"
@@ -31,4 +32,9 @@ func Connect() {
 
 	log.Println("Read:", readBuffer)
 	log.Println("Bytes read:", bytesRead)
+
+	var replyBuffer bytes.Buffer
+	replyBuffer.Write(readBuffer[:bytesRead])
+
+	log.Println("replyBuffer:", replyBuffer)
 }
