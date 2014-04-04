@@ -17,6 +17,8 @@ func main() {
 	}
 
 	log.Println("Successfully started!")
+
+	Connect()
 }
 
 // Some error handling, could be improved
