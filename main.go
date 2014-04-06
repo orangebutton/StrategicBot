@@ -23,6 +23,8 @@ func main() {
 	ScrollValues := LoadScrollValues()
 
 	log.Println(ScrollValues)
+
+	StoreScrollValues(ScrollValues)
 }
 
 // Some error handling, could be improved
