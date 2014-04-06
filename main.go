@@ -8,9 +8,9 @@ import (
 func main() {
 	log.Println("Starting Up...")
 
-	Configuration := LoadConfiguration()
+	config := LoadConfiguration()
 
-	if Configuration.LogSystem {
+	if config.LogSystem {
 		file, err := os.OpenFile("Applications/StrategicBot/bot.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 		deny(err)
 		log.SetOutput(file)
@@ -18,7 +18,7 @@ func main() {
 
 	log.Println("Successfully started!")
 
-	Connect()
+	Connect(config.Email, config.Password)
 
 	ScrollValues := LoadScrollValues()
 

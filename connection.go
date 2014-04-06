@@ -3,67 +3,60 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"log"
 	"net"
+	"net/http"
 	"strconv"
 )
 
-type SBRequest map[string]interface{}
+type Request map[string]interface{}
+type LoginToken map[string]interface{}
 
-// Needs to look up the lobby URL, get the login token and then connect.
-func Connect() {
-	con, ch := ListonToURL("107.21.58.31:8081")
-
-	log.Println("Connection established:", con)
-
-	marshaledReq, err := json.Marshal(SBRequest{"msg": "LobbyLookup"})
+func SendRequest(con net.Conn, req Request) bool {
+	marshaledReq, err := json.Marshal(req)
 	deny(err)
 
-	log.Println("Marshaled Request:", marshaledReq)
+	_, err = con.Write(marshaledReq)
 
-	bytesWritten, err := con.Write(marshaledReq)
-	deny(err)
-
-	log.Println("Bytes written: ", bytesWritten)
-
-	for reply := range ch {
-		var v MLobbyLookup
-		json.Unmarshal(reply, &v)
-		if v.Msg == "LobbyLookup" {
-			lobbyURL := v.Ip + ":" + strconv.Itoa(v.Port)
-			log.Println("v is:", v)
-			log.Println("lobbyURL is:", lobbyURL)
-		}
-	}
+	return err == nil
 }
 
-// Listens to an URL and buffers the read bytes.
-func ListonToURL(url string) (net.Conn, chan []byte) {
+func Connect(email, password string) {
+	log.Println("LobbyURL is", GetLobbyURL())
+	log.Println("LoginToken is ", GetLoginToken(email, password))
+}
+
+// Listen to an URL and send line by line into a channel
+// Returns the connection and said channel
+func ListenToURL(url string) (net.Conn, chan []byte) {
 	// Connect to the specified URL
 	con, err := net.Dial("tcp", url)
 	deny(err)
 
-	// Make a channel to pass the listened content to other functions
+	// Make the channel (it can send and recieve byte-slices)
 	ch := make(chan []byte)
 
-	// Goroutine which listens and cuts the content into convenient portions
 	go func() {
 		var chBuffer bytes.Buffer
-		readBuffer := make([]byte, 1024)
+		readFromCon := make([]byte, 1024)
 
 		for {
-			bytesRead, err := con.Read(readBuffer)
-			if err != nil {
+			// Read 1024 bytes
+			bytesRead, err := con.Read(readFromCon)
+			if err == io.EOF {
 				close(ch)
-				log.Printf("ListenToURL connection error: %s", err)
+				log.Printf("Reached end of file. Connection closed.")
 				return
 			}
 
-			chBuffer.Write(readBuffer[:bytesRead])
+			// Buffer them
+			chBuffer.Write(readFromCon[:bytesRead])
 
 			// Cut into lines
 			lines := bytes.SplitAfter(chBuffer.Bytes(), []byte("\n"))
 
+			// Send lines to the through the channel
 			for _, line := range lines[:len(lines)-1] {
 				n := len(line)
 				if n > 1 {
@@ -78,4 +71,52 @@ func ListonToURL(url string) (net.Conn, chan []byte) {
 	}()
 
 	return con, ch
+}
+
+func GetLobbyURL() string {
+	con, ch := ListenToURL("107.21.58.31:8081")
+	defer con.Close()
+
+	SendRequest(con, Request{"msg": "LobbyLookup"})
+
+	for reply := range ch {
+		var v MLobbyLookup
+		json.Unmarshal(reply, &v)
+		if v.Msg == "LobbyLookup" {
+			return v.Ip + ":" + strconv.Itoa(v.Port)
+		}
+	}
+
+	return ""
+}
+
+func GetLoginToken(email, password string) LoginToken {
+	req := Request{
+		"agent": Request{
+			"name": "Scrolls",
+			"version": 1,
+		},
+		"username": email,
+		"password": password,
+	}
+
+	marshaledReq, err := json.Marshal(req)
+	deny(err)
+
+	buf := bytes.NewBufferString(string(marshaledReq))
+
+	resp, err := http.Post("https://authserver.mojang.com/authenticate", "application/json", buf)
+	deny(err)
+	defer resp.Body.Close()
+
+	readBuf := make([]byte, 2000)
+
+	bytesRead, err := resp.Body.Read(readBuf)
+	deny(err)
+
+	var token LoginToken
+	err = json.Unmarshal(readBuf[:bytesRead], &token)
+	deny(err)
+
+	return token
 }
