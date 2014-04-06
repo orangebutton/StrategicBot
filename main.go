@@ -19,6 +19,10 @@ func main() {
 	log.Println("Successfully started!")
 
 	Connect()
+
+	ScrollValues := LoadScrollValues()
+
+	log.Println(ScrollValues)
 }
 
 // Some error handling, could be improved
