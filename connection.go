@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"io"
 	"log"
 	"net"
 	"net/http"
@@ -23,8 +22,12 @@ func SendRequest(con net.Conn, req Request) bool {
 }
 
 func Connect(email, password string) {
-	log.Println("LobbyURL is", GetLobbyURL())
-	log.Println("LoginToken is ", GetLoginToken(email, password))
+	log.Println("===== Connection =====")
+
+	url := GetLobbyURL()
+	token := GetLoginToken(email, password)
+
+	log.Println(url, token)
 }
 
 // Listen to an URL and send line by line into a channel
@@ -33,6 +36,8 @@ func ListenToURL(url string) (net.Conn, chan []byte) {
 	// Connect to the specified URL
 	con, err := net.Dial("tcp", url)
 	deny(err)
+
+	log.Println("Listening on new connection:", url)
 
 	// Make the channel (it can send and recieve byte-slices)
 	ch := make(chan []byte)
@@ -44,9 +49,9 @@ func ListenToURL(url string) (net.Conn, chan []byte) {
 		for {
 			// Read 1024 bytes
 			bytesRead, err := con.Read(readFromCon)
-			if err == io.EOF {
+			if err != nil {
 				close(ch)
-				log.Printf("Reached end of file. Connection closed.")
+				log.Println("Connection error:", err)
 				return
 			}
 
@@ -74,8 +79,10 @@ func ListenToURL(url string) (net.Conn, chan []byte) {
 }
 
 func GetLobbyURL() string {
+	log.Println("Get lobby URL...")
 	con, ch := ListenToURL("107.21.58.31:8081")
 	defer con.Close()
+	defer log.Println("Connection closed: 107.21.58.31:8081")
 
 	SendRequest(con, Request{"msg": "LobbyLookup"})
 
@@ -83,7 +90,9 @@ func GetLobbyURL() string {
 		var v MLobbyLookup
 		json.Unmarshal(reply, &v)
 		if v.Msg == "LobbyLookup" {
-			return v.Ip + ":" + strconv.Itoa(v.Port)
+			url := v.Ip + ":" + strconv.Itoa(v.Port)
+			log.Println("Lobby URL is", url)
+			return url
 		}
 	}
 
@@ -91,6 +100,8 @@ func GetLobbyURL() string {
 }
 
 func GetLoginToken(email, password string) LoginToken {
+	log.Println("Get login token...")
+
 	req := Request{
 		"agent": Request{
 			"name": "Scrolls",
@@ -117,6 +128,8 @@ func GetLoginToken(email, password string) LoginToken {
 	var token LoginToken
 	err = json.Unmarshal(readBuf[:bytesRead], &token)
 	deny(err)
+
+	log.Println("Recieved login token")
 
 	return token
 }

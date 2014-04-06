@@ -6,8 +6,6 @@ import (
 )
 
 func main() {
-	log.Println("Starting Up...")
-
 	config := LoadConfiguration()
 
 	if config.LogSystem {
@@ -15,8 +13,6 @@ func main() {
 		deny(err)
 		log.SetOutput(file)
 	}
-
-	log.Println("Successfully started!")
 
 	Connect(config.Email, config.Password)
 

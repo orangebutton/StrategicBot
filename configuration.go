@@ -18,12 +18,12 @@ func LoadConfiguration() *SBConfiguration {
 	deny(err)
 
 	decoder := json.NewDecoder(file)
-	configuration := new(SBConfiguration)
-	decoder.Decode(configuration)
+	config := new(SBConfiguration)
+	decoder.Decode(config)
 
-	log.Println("Configuration file loaded...")
-	log.Println("Email:", configuration.Email)
-	log.Println("LogSystem:", configuration.LogSystem)
+	log.Println("===== Configuration =====")
+	log.Println("Email:", config.Email)
+	log.Println("LogSystem:", config.LogSystem, "\n")
 
-	return configuration
+	return config
 }
