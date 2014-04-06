@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 type Request map[string]interface{}
@@ -24,10 +25,32 @@ func SendRequest(con net.Conn, req Request) bool {
 func Connect(email, password string) {
 	log.Println("===== Connection =====")
 
-	url := GetLobbyURL()
 	token := GetLoginToken(email, password)
 
-	log.Println(url, token)
+	url := GetLobbyURL()
+
+	log.Println("===== Initialize =====")
+
+	con, ch := ListenToURL(url)
+
+	SendRequest(con, Request{
+		"msg": "FirstConnect",
+		"accessToken": token,
+	})
+
+	state := SBState{con: con}
+
+	time.Sleep(time.Second * 10)
+
+	go func() {
+		defer con.Close()
+		defer log.Println("Connection closed:", url)
+
+		for {
+			reply := <-ch
+			state.HandleReply(reply)
+		}
+	}()
 }
 
 // Listen to an URL and send line by line into a channel
@@ -82,7 +105,7 @@ func GetLobbyURL() string {
 	log.Println("Get lobby URL...")
 	con, ch := ListenToURL("107.21.58.31:8081")
 	defer con.Close()
-	defer log.Println("Connection closed: 107.21.58.31:8081")
+	defer log.Println("Connection closed: 107.21.58.31:8081\n")
 
 	SendRequest(con, Request{"msg": "LobbyLookup"})
 
