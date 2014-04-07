@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 )
 
 func main() {
@@ -14,13 +15,36 @@ func main() {
 		log.SetOutput(file)
 	}
 
-	Connect(config.Email, config.Password)
+	for {
+		StartBot(config.Email, config.Password)
+	}
+}
 
-	ScrollValues := LoadScrollValues()
+func StartBot(email, password string) {
+	defer func() {
+		log.Println("Shut bot down.")
+	}()
 
-	log.Println(ScrollValues)
+	s, chAlive := Connect(email, password)
+	log.Println(s, chAlive)
 
-	StoreScrollValues(ScrollValues)
+	for {
+		timeout := time.After(time.Minute * 1)
+		InnerLoop:
+		for {
+			select {
+				case <-chAlive:
+					break InnerLoop
+				case <-s.chQuit:
+					log.Println("Bot Quit")
+					s.chQuit <- true
+					return
+				case <-timeout:
+					log.Println("Time out")
+					return
+			}
+		}
+	}
 }
 
 // Some error handling, could be improved

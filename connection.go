@@ -22,35 +22,48 @@ func SendRequest(con net.Conn, req Request) bool {
 	return err == nil
 }
 
-func Connect(email, password string) {
+func Connect(email, password string) (*SBState, chan bool) {
 	log.Println("===== Connection =====")
 
 	token := GetLoginToken(email, password)
-
 	url := GetLobbyURL()
 
 	log.Println("===== Initialize =====")
 
 	con, ch := ListenToURL(url)
-
 	SendRequest(con, Request{
 		"msg": "FirstConnect",
 		"accessToken": token,
 	})
 
-	state := SBState{con: con}
+	state := InitState(con)
+	chAlive := make(chan bool, 1)
+	// Buffer size 1 makes the channel asynchronous
+	// Communication succeds also if sender or reciever is not yet ready
 
-	time.Sleep(time.Second * 10)
+	time.Sleep(time.Second * 2)
 
 	go func() {
 		defer con.Close()
 		defer log.Println("Connection closed:", url)
 
 		for {
-			reply := <-ch
-			state.HandleReply(reply)
+			select {
+			case reply := <-ch:
+				if state.HandleReply(reply) {
+					chAlive <- true
+				} else {
+					state.chQuit <- true
+				}
+			case <-state.chQuit:
+				log.Println("Return from Connect(). chQuit was sent.")
+				state.chQuit <- true
+				return
+			}
 		}
 	}()
+
+	return state, chAlive
 }
 
 // Listen to an URL and send line by line into a channel
