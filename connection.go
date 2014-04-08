@@ -41,20 +41,26 @@ func Connect(email, password string) (*SBState, chan bool) {
 	// Buffer size 1 makes the channel asynchronous
 	// Communication succeds also if sender or reciever is not yet ready
 
-	time.Sleep(time.Second * 2)
-
 	go func() {
 		defer con.Close()
 		defer log.Println("Connection closed:", url)
 
+		ping := time.Tick(time.Second * 5)
+
 		for {
 			select {
+			case req := <-state.chRequests:
+				if !SendRequest(con, req) {
+					state.chQuit <- true
+				}
 			case reply := <-ch:
 				if state.HandleReply(reply) {
 					chAlive <- true
 				} else {
 					state.chQuit <- true
 				}
+			case <-ping:
+				state.SendRequest(Request{"msg": "Ping"})
 			case <-state.chQuit:
 				log.Println("Return from Connect(). chQuit was sent.")
 				state.chQuit <- true
