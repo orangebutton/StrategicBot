@@ -28,6 +28,9 @@ func StartBot(email, password string) {
 	s, chAlive := Connect(email, password)
 	log.Println(s, chAlive)
 
+	s.JoinRoom("strategic trading")
+	s.Say("strategic trading", "hello")
+
 	for {
 		timeout := time.After(time.Minute * 1)
 		InnerLoop:
