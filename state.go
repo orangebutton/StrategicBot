@@ -12,6 +12,11 @@ type SBState struct {
 	chRequests	chan Request
 }
 
+var (
+	CardTypes = make(map[CardId]Card)
+	CardRarities = make(map[Card]int)
+)
+
 func InitState(con net.Conn) *SBState {
 	s := SBState{con: con}
 	s.chQuit = make(chan bool, 5)
@@ -37,7 +42,18 @@ func (s *SBState) HandleReply(reply []byte) bool {
 	case "CardTypes":
 		var v MCardTypes
 		json.Unmarshal(reply, &v)
+		for _, cardType := range v.CardTypes {
+			CardTypes[cardType.Id] = cardType.Name
+			CardRarities[cardType.Name] = cardType.Rarity
+		}
 		log.Println(m)
+		log.Println("Read out card types and rarities:", CardTypes, CardRarities)
+
+	case "RoomChatMessage":
+		var v MRoomChatMessage
+		json.Unmarshal(reply, &v)
+		log.Println(m)
+		log.Println("Chat message:", v.Text)
 		
 	default:
 		log.Println(m)
