@@ -6,6 +6,7 @@ type (
 	Card    string
 	CardId  int
 	CardUid int
+	Level	int
 )
 
 type Reply struct {

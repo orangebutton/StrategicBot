@@ -28,8 +28,9 @@ func StartBot(email, password string) {
 	s, chAlive := Connect(email, password)
 	log.Println(s, chAlive)
 
-	s.JoinRoom("strategic trading")
-	s.Say("strategic trading", "hello")
+	s.JoinRoom("strategicdev")
+	s.Say("strategicdev", "hello")
+	s.SendRequest(Request{"msg": "LibraryView"})
 
 	for {
 		timeout := time.After(time.Minute * 1)
