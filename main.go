@@ -29,8 +29,10 @@ func StartBot(email, password string) {
 	log.Println(s, chAlive)
 
 	s.JoinRoom("strategicdev")
+	s.JoinRoom("strategicdev2")
 	s.Say("strategicdev", "hello")
 	s.SendRequest(Request{"msg": "LibraryView"})
+	s.StartMessageHandling()
 
 	for {
 		timeout := time.After(time.Minute * 1)

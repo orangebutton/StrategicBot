@@ -8,13 +8,20 @@ import (
 
 type SBState struct {
 	con			net.Conn
-	chQuit		chan bool
+	chMessages	chan Message
 	chRequests	chan Request
+	chQuit		chan bool
 
 	Player
-	ProfileId	string
-	Stock		map[Card][3]int
-	Gold		int
+	ProfileId		string
+	Stock			map[Card][3]int
+	Gold			int
+}
+
+type Message struct {
+	Text 		string
+	From		Player
+	Channel		Channel
 }
 
 var (
@@ -24,8 +31,9 @@ var (
 
 func InitState(con net.Conn) *SBState {
 	s := SBState{con: con}
-	s.chQuit = make(chan bool, 5)
+	s.chMessages = make(chan Message, 1)
 	s.chRequests = make(chan Request, 10)
+	s.chQuit = make(chan bool, 5)
 
 	s.SendRequest(Request{"msg": "JoinLobby"})
 
@@ -93,15 +101,27 @@ func (s *SBState) HandleReply(reply []byte) bool {
 	case "RoomChatMessage":
 		var v MRoomChatMessage
 		json.Unmarshal(reply, &v)
-		log.Println(m)
-		log.Println("Chat message:", v.Text)
+		if v.From != s.Player {
+			s.chMessages <- Message{v.Text, v.From, Channel(v.RoomName)}
+		}
+
+		log.Println("Chat message:", v.Text, "From:", v.From, "In:", v.RoomName)
 
 	case "TradeInviteForward":
 		var v MTradeInviteForward
 		json.Unmarshal(reply, &v)
 		log.Println(string(reply))
-		// s.SendRequest(Request{"msg": "TradeInvite", "profile": v.Inviter.Id})
-		
+		s.SendRequest(Request{"msg": "TradeInvite", "profile": v.Inviter.Id})
+
+	case "Whisper":
+		var v MWhisper
+		json.Unmarshal(reply, &v)
+		if v.From != s.Player {
+			s.chMessages <- Message{v.Text, v.From, Channel("WHISPER")}
+		}
+
+		log.Println("Whisper message:", v.Text, "From:", v.From)
+
 	default:
 		log.Println(m)
 	}
