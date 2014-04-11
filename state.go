@@ -141,11 +141,3 @@ func (s *SBState) JoinRoom(room Channel) {
 func (s *SBState) LeaveRoom(room Channel) {
 	s.SendRequest(Request{"msg": "RoomExit", "roomName": room})
 }
-
-func (s *SBState) Say(room Channel, text string) {
-	s.SendRequest(Request{"msg": "RoomChatMessage", "text": text, "roomName": room})
-}
-
-func (s *SBState) Whisper(player Player, text string) {
-	s.SendRequest(Request{"msg": "Whisper", "text": text, "toProfileName": player})
-}
