@@ -16,16 +16,16 @@ func main() {
 	}
 
 	for {
-		StartBot(config.Email, config.Password)
+		StartBot(config.Email, config.Password, config.Owner)
 	}
 }
 
-func StartBot(email, password string) {
+func StartBot(email, password, owner string) {
 	defer func() {
 		log.Println("Shut bot down.")
 	}()
 
-	s, chAlive := Connect(email, password)
+	s, chAlive := Connect(email, password, owner)
 	log.Println(s, chAlive)
 
 	s.JoinRoom("strategicdev")

@@ -18,15 +18,42 @@ func (s *SBState) StartMessageHandling() {
 }
 
 func (s *SBState) HandleMessage(m Message) {
-	command, _ := ParseCommandAndArgs(m.Text)
+	command, args := ParseCommandAndArgs(m.Text)
 
 	switch command {
 	case "!help":
 		s.Reply(SBHelpMessage, false, m)
+
 	case "!price":
 		s.Reply("Cannot tell the price yet", true, m)
+
 	case "!stock":
 		s.Reply("Don't know how to tell the stock", false, m)
+
+	default:
+		s.HandleOwnerMessage(command, args, m.From)
+	}
+}
+
+func (s *SBState) HandleOwnerMessage(command, args string, from Player) {
+	if from != s.Owner {
+		return
+	}
+
+	switch command {
+		case "!say":
+			tokens := strings.SplitN(args, ":", 2)
+			s.Say(Channel(tokens[0]), tokens[1])
+
+		case "!whisper", "!w":
+			tokens := strings.SplitN(args, " ", 2)
+			s.Whisper(Player(tokens[0]), tokens[1])
+
+		case "!join":
+			s.JoinRoom(Channel(args))
+
+		case "!leave":
+			s.LeaveRoom(Channel(args))
 	}
 }
 

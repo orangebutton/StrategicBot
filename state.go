@@ -13,6 +13,7 @@ type SBState struct {
 	chQuit		chan bool
 
 	Player
+	Owner			Player
 	ProfileId		string
 	Stock			map[Card][3]int
 	Gold			int
@@ -29,8 +30,10 @@ var (
 	CardRarities = make(map[Card]int)
 )
 
-func InitState(con net.Conn) *SBState {
+func InitState(con net.Conn, owner string) *SBState {
 	s := SBState{con: con}
+	s.Owner = Player(owner)
+
 	s.chMessages = make(chan Message, 1)
 	s.chRequests = make(chan Request, 10)
 	s.chQuit = make(chan bool, 5)

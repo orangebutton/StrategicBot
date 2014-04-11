@@ -22,7 +22,7 @@ func SendRequest(con net.Conn, req Request) bool {
 	return err == nil
 }
 
-func Connect(email, password string) (*SBState, chan bool) {
+func Connect(email, password, owner string) (*SBState, chan bool) {
 	log.Println("===== Connection =====")
 
 	token := GetLoginToken(email, password)
@@ -36,7 +36,7 @@ func Connect(email, password string) (*SBState, chan bool) {
 		"accessToken": token,
 	})
 
-	state := InitState(con)
+	state := InitState(con, owner)
 	chAlive := make(chan bool, 1)
 	// Buffer size 1 makes the channel asynchronous
 	// Communication succeds also if sender or reciever is not yet ready

@@ -11,6 +11,7 @@ type SBConfiguration struct {
 	Password string
 
 	LogSystem bool
+	Owner string
 }
 
 func LoadConfiguration() *SBConfiguration {
@@ -23,7 +24,8 @@ func LoadConfiguration() *SBConfiguration {
 
 	log.Println("===== Configuration =====")
 	log.Println("Email:", config.Email)
-	log.Println("LogSystem:", config.LogSystem, "\n")
+	log.Println("LogSystem:", config.LogSystem)
+	log.Println("Owner:", config.Owner, "\n")
 
 	return config
 }
